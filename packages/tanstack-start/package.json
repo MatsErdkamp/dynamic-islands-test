@@ -1,0 +1,28 @@
+{
+  "name": "@superobjective/tanstack-start",
+  "version": "0.0.0",
+  "type": "module",
+  "sideEffects": false,
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean --sourcemap --external @superobjective/editable-core --external @superobjective/cloudflare --external @tanstack/react-query --external react --external react-dom --external zod"
+  },
+  "dependencies": {
+    "@superobjective/cloudflare": "workspace:*",
+    "@superobjective/editable-core": "workspace:*",
+    "@tanstack/react-query": "^5.100.9",
+    "zod": "^4.1.13"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0 || ^19.0.0",
+    "react-dom": "^18.3.0 || ^19.0.0"
+  }
+}

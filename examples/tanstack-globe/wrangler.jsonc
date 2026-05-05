@@ -1,0 +1,33 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "superobjective-tanstack-globe",
+  "compatibility_date": "2026-05-04",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "app/server.ts",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SO_ORCHESTRATOR",
+        "class_name": "SuperobjectiveOrchestrator"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["SuperobjectiveOrchestrator"]
+    }
+  ],
+  "worker_loaders": [
+    {
+      "binding": "SO_LOADER"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "vars": {
+    "SO_AI_GATEWAY_ID": "default",
+    "SO_EDIT_MODEL": "@cf/qwen/qwen2.5-coder-32b-instruct"
+  }
+}

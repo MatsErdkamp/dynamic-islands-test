@@ -1,0 +1,23 @@
+{
+  "name": "superobjective-globe-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "alchemy dev alchemy.run.ts",
+    "wrangler:dev": "wrangler dev src/worker.tsx",
+    "deploy": "alchemy deploy alchemy.run.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@superobjective/cloudflare": "workspace:*",
+    "@superobjective/tanstack-start": "workspace:*",
+    "@tanstack/react-query": "^5.100.9",
+    "alchemy": "2.0.0-beta.30",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "wrangler": "^4.50.0"
+  }
+}

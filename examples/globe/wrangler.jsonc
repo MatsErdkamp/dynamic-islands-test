@@ -1,0 +1,38 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "default-demo",
+  "main": "src/worker.tsx",
+  "compatibility_date": "2026-05-04",
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "SO_ORCHESTRATOR",
+        "class_name": "SuperobjectiveOrchestrator"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["SuperobjectiveOrchestrator"]
+    }
+  ],
+  "worker_loaders": [
+    {
+      "binding": "SO_LOADER"
+    }
+  ],
+  "services": [
+    {
+      "binding": "FLIGHT_DATA",
+      "service": "flight-data"
+    }
+  ],
+  "ai": {
+    "binding": "AI"
+  },
+  "vars": {
+    "SO_AI_GATEWAY_ID": "default",
+    "SO_EDIT_MODEL": "@cf/qwen/qwen2.5-coder-32b-instruct"
+  }
+}

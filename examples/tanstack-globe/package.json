@@ -1,0 +1,33 @@
+{
+  "name": "superobjective-tanstack-globe-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "alchemy:dev": "alchemy dev alchemy.run.ts",
+    "tunnel": "cloudflared tunnel --url http://localhost:5173",
+    "build": "vite build && tsc --noEmit",
+    "preview": "vite preview",
+    "deploy": "alchemy deploy alchemy.run.ts",
+    "cf-typegen": "wrangler types"
+  },
+  "dependencies": {
+    "@superobjective/cloudflare": "workspace:*",
+    "@superobjective/tanstack-start": "workspace:*",
+    "@tanstack/react-query": "^5.100.9",
+    "@tanstack/react-router": "^1.169.1",
+    "@tanstack/react-start": "^1.167.63",
+    "alchemy": "next",
+    "react": "^19.2.1",
+    "react-dom": "^19.2.1",
+    "zod": "^4.1.13"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.35.0",
+    "@tanstack/router-plugin": "^1.167.33",
+    "@vitejs/plugin-react": "^5.1.2",
+    "typescript": "^5.9.3",
+    "vite": "^8.0.10",
+    "wrangler": "^4.50.0"
+  }
+}

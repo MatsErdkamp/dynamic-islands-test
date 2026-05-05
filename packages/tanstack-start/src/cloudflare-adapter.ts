@@ -1,9 +1,15 @@
-import {
-  deriveOrchestratorName,
-  type DurableObjectNamespaceLike,
-  type DurableObjectStubLike,
-} from "@superobjective/cloudflare";
-import type { EditableBoot } from "@superobjective/editable-core";
+import { stableHash, type EditableBoot } from "@superobjective/editable-core";
+
+export type DurableObjectIdLike = unknown;
+
+export type DurableObjectStubLike = {
+  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+};
+
+export type DurableObjectNamespaceLike = {
+  idFromName(name: string): DurableObjectIdLike;
+  get(id: DurableObjectIdLike): DurableObjectStubLike;
+};
 
 export type CloudflareEditableAdapterOptions = {
   namespaceBinding?: string;
@@ -117,4 +123,19 @@ function rewriteSoUrl(url: URL): string {
   }
 
   return `https://orchestrator.local/${url.pathname.replace(/^\/_so\//, "")}`;
+}
+
+function deriveOrchestratorName(input: {
+  actorId: string;
+  pageId: string;
+  islandId?: string;
+}): string {
+  return [
+    "so",
+    stableHash({
+      actorId: input.actorId,
+      pageId: input.pageId,
+      islandId: input.islandId,
+    }).slice(1),
+  ].join(":");
 }

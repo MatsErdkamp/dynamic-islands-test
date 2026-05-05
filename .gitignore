@@ -16,6 +16,7 @@ coverage/
 
 # Superobjective generated local artifacts
 .superobjective/
+examples/*/app/routes/_so.$.ts
 
 # Environment files
 .env

@@ -22,6 +22,16 @@ export async function compileEditableArtifact({
 }: CompileEditableArtifactInput): Promise<CompiledEditableArtifact> {
   const id = artifactId ?? createArtifactId(draft);
 
+  if (isCloudflareWorkersRuntime()) {
+    try {
+      return await compileWithWorkerBundler({ artifactId: id, draft, maxBytes });
+    } catch (error) {
+      if (isValidationError(error)) {
+        throw error;
+      }
+    }
+  }
+
   try {
     return await compileLocally({ artifactId: id, draft, maxBytes });
   } catch (error) {
@@ -57,6 +67,63 @@ export async function compileEditableArtifact({
   }
 
   return compileLocally({ artifactId: id, draft, maxBytes });
+}
+
+async function compileWithWorkerBundler(input: {
+  artifactId: string;
+  draft: EditableArtifactDraft;
+  maxBytes?: number;
+}): Promise<CompiledEditableArtifact> {
+  const validation = validateEditableArtifact(input.draft, {
+    maxBytes: input.maxBytes,
+    requireRuntimeImports: true,
+  });
+
+  if (!validation.ok) {
+    throw new Error(
+      `Generated artifact validation failed: ${validation.issues
+        .map((issue) => issue.message)
+        .join("; ")}`,
+    );
+  }
+
+  const { createWorker } = (await import(
+    "@cloudflare/worker-bundler"
+  )) as typeof import("@cloudflare/worker-bundler");
+  const workspace = createWorkerBundlerWorkspace(input.draft);
+  const result = await createWorker({
+    files: workspace.files,
+    entryPoint: workspace.entrypoint,
+    bundle: true,
+    target: "es2022",
+    minify: true,
+    sourcemap: false,
+    jsx: "transform",
+    conditions: ["browser", "worker", "workerd"],
+    define: {
+      "process.env.NODE_ENV": JSON.stringify("production"),
+    },
+  });
+  const compiledClientJs = moduleToJs(
+    result.modules[result.mainModule],
+    result.mainModule,
+  );
+
+  return {
+    id: input.artifactId,
+    islandId: input.draft.islandId,
+    kind: input.draft.kind ?? "generated-client",
+    sourceTsx: input.draft.sourceTsx,
+    compiledClientJs,
+    integrity: createArtifactIntegrity({
+      sourceTsx: input.draft.sourceTsx,
+      compiledClientJs,
+      kind: input.draft.kind ?? "generated-client",
+    }),
+    status: "active",
+    createdAt: new Date().toISOString(),
+    validation,
+  };
 }
 
 export async function runCodeModeInDynamicWorker(input: {
@@ -294,6 +361,166 @@ function normalizeWorkspaceFiles(draft: EditableArtifactDraft): Record<string, s
   };
 }
 
+const WORKER_BUNDLER_RUNTIME_PATH = "src/__so_runtime.ts";
+const WORKER_BUNDLER_JSX_RUNTIME_PATH = "src/__so_jsx_runtime.ts";
+
+function createWorkerBundlerWorkspace(draft: EditableArtifactDraft): {
+  files: Record<string, string>;
+  entrypoint: string;
+} {
+  const entrypoint = draft.entrypoint ?? "src/GeneratedIsland.tsx";
+  const files = normalizeWorkspaceFiles(draft);
+  const rewrittenFiles = Object.fromEntries(
+    Object.entries(files).map(([path, source]) => [
+      path,
+      rewriteWorkspaceRuntimeImports(source, path),
+    ]),
+  );
+
+  return {
+    entrypoint,
+    files: {
+      ...rewrittenFiles,
+      [WORKER_BUNDLER_RUNTIME_PATH]: WORKER_BUNDLER_RUNTIME_SOURCE,
+      [WORKER_BUNDLER_JSX_RUNTIME_PATH]: WORKER_BUNDLER_JSX_RUNTIME_SOURCE,
+      "package.json": JSON.stringify({
+        type: "module",
+        private: true,
+        dependencies: {},
+      }),
+    },
+  };
+}
+
+function rewriteWorkspaceRuntimeImports(source: string, importer: string): string {
+  const runtimeImport = relativeImportSpecifier(
+    importer,
+    WORKER_BUNDLER_RUNTIME_PATH,
+  );
+  const jsxRuntimeImport = relativeImportSpecifier(
+    importer,
+    WORKER_BUNDLER_JSX_RUNTIME_PATH,
+  );
+
+  return source
+    .replace(
+      /(\b(?:import|export)\s+(?:type\s+)?(?:[^"'`]+?\s+from\s+)?["'])react(["'])/g,
+      `$1${runtimeImport}$2`,
+    )
+    .replace(
+      /(\b(?:import|export)\s+(?:type\s+)?(?:[^"'`]+?\s+from\s+)?["'])react\/jsx-runtime(["'])/g,
+      `$1${jsxRuntimeImport}$2`,
+    )
+    .replace(
+      /(\b(?:import|export)\s+(?:type\s+)?(?:[^"'`]+?\s+from\s+)?["'])@superobjective\/tanstack-start(["'])/g,
+      `$1${runtimeImport}$2`,
+    );
+}
+
+function relativeImportSpecifier(importer: string, target: string): string {
+  const fromParts = importer.split("/").slice(0, -1);
+  const targetParts = target.split("/");
+
+  while (
+    fromParts.length &&
+    targetParts.length &&
+    fromParts[0] === targetParts[0]
+  ) {
+    fromParts.shift();
+    targetParts.shift();
+  }
+
+  const prefix = fromParts.map(() => "..");
+  const specifier = [...prefix, ...targetParts].join("/");
+
+  return specifier.startsWith(".") ? specifier : `./${specifier}`;
+}
+
+function moduleToJs(
+  module: string | { js?: string; cjs?: string; text?: string } | undefined,
+  moduleName: string,
+): string {
+  if (typeof module === "string") {
+    return module;
+  }
+
+  if (module?.js) {
+    return module.js;
+  }
+
+  if (module?.cjs) {
+    return module.cjs;
+  }
+
+  if (module?.text) {
+    return module.text;
+  }
+
+  throw new Error(`Worker bundler did not return JavaScript for ${moduleName}.`);
+}
+
+const WORKER_BUNDLER_RUNTIME_SOURCE = `
+const React = globalThis.React;
+const runtime = globalThis.SuperobjectiveTanStackStart;
+
+export default React;
+export const Children = React.Children;
+export const Component = React.Component;
+export const Fragment = React.Fragment;
+export const Profiler = React.Profiler;
+export const PureComponent = React.PureComponent;
+export const StrictMode = React.StrictMode;
+export const Suspense = React.Suspense;
+export const cloneElement = React.cloneElement;
+export const createContext = React.createContext;
+export const createElement = React.createElement;
+export const createRef = React.createRef;
+export const forwardRef = React.forwardRef;
+export const isValidElement = React.isValidElement;
+export const lazy = React.lazy;
+export const memo = React.memo;
+export const startTransition = React.startTransition;
+export const use = React.use;
+export const useActionState = React.useActionState;
+export const useCallback = React.useCallback;
+export const useContext = React.useContext;
+export const useDebugValue = React.useDebugValue;
+export const useDeferredValue = React.useDeferredValue;
+export const useEffect = React.useEffect;
+export const useId = React.useId;
+export const useImperativeHandle = React.useImperativeHandle;
+export const useInsertionEffect = React.useInsertionEffect;
+export const useLayoutEffect = React.useLayoutEffect;
+export const useMemo = React.useMemo;
+export const useOptimistic = React.useOptimistic;
+export const useReducer = React.useReducer;
+export const useRef = React.useRef;
+export const useState = React.useState;
+export const useSyncExternalStore = React.useSyncExternalStore;
+export const useTransition = React.useTransition;
+
+export const EditableIslandShell = runtime.EditableIslandShell;
+export const createCloudflareEditableAdapter = runtime.createCloudflareEditableAdapter;
+export const createEditableFunction = runtime.createEditableFunction;
+export const createEditableIsland = runtime.createEditableIsland;
+export const createEditableRoute = runtime.createEditableRoute;
+export const createEditableServerFunction = runtime.createEditableServerFunction;
+export const useEditableFunction = runtime.useEditableFunction;
+export const useEditableToolManifest = runtime.useEditableToolManifest;
+export const useEditableView = runtime.useEditableView;
+`;
+
+const WORKER_BUNDLER_JSX_RUNTIME_SOURCE = `
+const React = globalThis.React;
+
+export const Fragment = React.Fragment;
+export function jsx(type, props, key) {
+  return React.createElement(type, key === undefined ? props : { ...props, key });
+}
+export const jsxs = jsx;
+export const jsxDEV = jsx;
+`;
+
 function loaderForPath(path: string): "js" | "jsx" | "ts" | "tsx" | "css" {
   if (path.endsWith(".tsx")) return "tsx";
   if (path.endsWith(".ts")) return "ts";
@@ -332,5 +559,11 @@ function isValidationError(error: unknown): boolean {
   return (
     error instanceof Error &&
     /Generated artifact validation failed/.test(error.message)
+  );
+}
+
+function isCloudflareWorkersRuntime(): boolean {
+  return /\bCloudflare-Workers\b|workerd/i.test(
+    globalThis.navigator?.userAgent ?? "",
   );
 }

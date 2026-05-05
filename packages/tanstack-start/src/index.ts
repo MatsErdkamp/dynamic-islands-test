@@ -42,10 +42,14 @@ export type {
   EditableToolCall,
 } from "./client-runtime.js";
 export {
+  createEditableFileRoute,
   createEditableRoute,
+  createLegacyEditableRoute,
 } from "./route.js";
 export type {
+  EditableFileRouteOptions,
   EditableRouteObject,
+  LegacyEditableRouteObject,
   EditableRouteOptions,
 } from "./route.js";
 export {

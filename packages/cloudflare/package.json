@@ -13,9 +13,10 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean --sourcemap --external @superobjective/editable-core --external esbuild"
+    "build": "tsup src/index.ts --format esm --dts --clean --sourcemap --external @superobjective/editable-core --external @cloudflare/worker-bundler --external esbuild"
   },
   "dependencies": {
+    "@cloudflare/worker-bundler": "^0.1.3",
     "@superobjective/editable-core": "workspace:*"
   },
   "optionalDependencies": {

@@ -13,12 +13,13 @@
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean --sourcemap --external @superobjective/editable-core --external @superobjective/cloudflare --external @tanstack/react-query --external react --external react-dom --external zod"
+    "build": "tsup src/index.ts --format esm --dts --clean --sourcemap --external @superobjective/editable-core --external @superobjective/cloudflare --external @tanstack/react-query --external @tanstack/react-router --external react --external react-dom --external zod"
   },
   "dependencies": {
     "@superobjective/cloudflare": "workspace:*",
     "@superobjective/editable-core": "workspace:*",
     "@tanstack/react-query": "^5.100.9",
+    "@tanstack/react-router": "^1.169.1",
     "zod": "^4.1.13"
   },
   "peerDependencies": {

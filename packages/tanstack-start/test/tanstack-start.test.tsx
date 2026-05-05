@@ -4,10 +4,13 @@ import { describe, expect, it } from "vitest";
 import {
   EditableIslandProvider,
   EditableIslandShell,
+  createEditableFileRoute,
   createEditableFunction,
   createEditableIsland,
   createInlineBootScript,
+  createLegacyEditableRoute,
   createModulePreloads,
+  superobjective,
   useEditableFunction,
   type EditableBoot,
 } from "../src/index.js";
@@ -40,7 +43,7 @@ const boot: EditableBoot = {
 
 describe("@superobjective/tanstack-start", () => {
   it("adds route(path) with TanStack cache defaults", async () => {
-    const route = island.route("/globe", {
+    const route = createLegacyEditableRoute(island, "/globe", {
       loadBoot: async () => boot,
       runtimeHref: "/_so/runtime/editable-island-runtime.js",
     });
@@ -58,6 +61,17 @@ describe("@superobjective/tanstack-start", () => {
         href: "/_so/runtime/editable-island-runtime.js",
       },
     ]);
+  });
+
+  it("creates editable file routes with a TanStack-like component option", () => {
+    const route = createEditableFileRoute("/globe")({
+      component: island,
+    });
+
+    expect(route.options.component).toBeTypeOf("function");
+    expect(route.options.staleTime).toBe(10_000);
+    expect(route.options.preloadStaleTime).toBe(30_000);
+    expect(route.options.gcTime).toBe(30 * 60_000);
   });
 
   it("inlines boot JSON and renders the trusted default shell", () => {
@@ -106,5 +120,36 @@ describe("@superobjective/tanstack-start", () => {
     );
 
     await expect(callEcho?.("hello")).resolves.toBe("hello");
+  });
+
+  it("injects defaultSourceTsx from the default component source", () => {
+    const plugin = superobjective({ islands: [island] });
+    const transformed = plugin.transform(
+      `
+        import { createEditableIsland, useEditableFunction } from "@superobjective/tanstack-start";
+
+        function DefaultGlobe() {
+          const echoFn = useEditableFunction(echo);
+
+          return <GlobeRenderer value="ok" />;
+        }
+
+        function GlobeRenderer({ value }) {
+          return <div>{value}</div>;
+        }
+
+        export const GlobeIsland = createEditableIsland({
+          id: "globe",
+          tools: [echo],
+          default: DefaultGlobe,
+        });
+      `,
+      "/app/lib/globe.tsx",
+    );
+
+    expect(transformed).toContain("defaultSourceTsx");
+    expect(transformed).toContain("export default function GeneratedGlobeIsland");
+    expect(transformed).toContain('useEditableFunction(\\"echo\\")');
+    expect(transformed).toContain("function GlobeRenderer");
   });
 });

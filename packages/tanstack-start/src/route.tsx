@@ -132,6 +132,7 @@ export function createEditableFileRoute(path: string) {
       gcTime: gcTime ?? 30 * 60_000,
       preloadStaleTime: preloadStaleTime ?? 30_000,
       staleReloadMode: staleReloadMode ?? "background",
+      ssr: (tanstackOptions as { ssr?: unknown }).ssr ?? false,
     } as never) as any;
 
     return route;

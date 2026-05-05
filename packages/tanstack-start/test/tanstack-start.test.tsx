@@ -72,6 +72,7 @@ describe("@superobjective/tanstack-start", () => {
     expect(route.options.staleTime).toBe(10_000);
     expect(route.options.preloadStaleTime).toBe(30_000);
     expect(route.options.gcTime).toBe(30 * 60_000);
+    expect(route.options.ssr).toBe(false);
   });
 
   it("composes TanStack beforeLoad and loader options", async () => {

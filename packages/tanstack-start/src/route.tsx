@@ -21,6 +21,9 @@ export type EditableRouteOptions = {
 
 export type EditableFileRouteOptions = EditableRouteOptions & {
   component: EditableIsland;
+  beforeLoad?: (ctx: any) => unknown | Promise<unknown>;
+  loader?: (ctx: any) => unknown | Promise<unknown>;
+  [key: string]: unknown;
 };
 
 export type LegacyEditableRouteObject = {
@@ -46,23 +49,117 @@ export function createEditableRoute(
   path: string,
   options: EditableRouteOptions = {},
 ): any {
-  return createFileRoute(path as never)({
-    component: () => (
-      <EditableIslandRoute island={island} path={path} options={options} />
-    ),
-    staleTime: options.staleTime ?? 10_000,
-    gcTime: options.gcTime ?? 30 * 60_000,
-    preloadStaleTime: options.preloadStaleTime ?? 30_000,
-    staleReloadMode: options.staleReloadMode ?? "background",
-  } as never) as any;
+  return createEditableFileRoute(path)({
+    ...options,
+    component: island,
+  });
 }
 
 export function createEditableFileRoute(path: string) {
   return (options: EditableFileRouteOptions): any => {
-    const { component, ...routeOptions } = options;
+    const {
+      component: island,
+      beforeLoad: userBeforeLoad,
+      loader: userLoader,
+      loadBoot,
+      prewarm,
+      runtimeHref,
+      callEndpoint,
+      staleTime,
+      gcTime,
+      preloadStaleTime,
+      staleReloadMode,
+      bootEndpoint,
+      loginPath,
+      userCookie,
+      showSessionBar,
+      ...tanstackOptions
+    } = options;
+    const editableOptions: EditableRouteOptions = {
+      loadBoot,
+      prewarm,
+      runtimeHref,
+      callEndpoint,
+      staleTime,
+      gcTime,
+      preloadStaleTime,
+      staleReloadMode,
+      bootEndpoint,
+      loginPath,
+      userCookie,
+      showSessionBar,
+    };
+    let route: any;
 
-    return createEditableRoute(component, path, routeOptions);
+    route = createFileRoute(path as never)({
+      ...tanstackOptions,
+      beforeLoad: async (ctx: any) => {
+        const userContext = userBeforeLoad
+          ? await userBeforeLoad(ctx)
+          : undefined;
+
+        return userContext;
+      },
+      loader: async (ctx: any) => {
+        await prewarm?.({ path, island });
+
+        const [userData, boot] = await Promise.all([
+          userLoader ? userLoader(ctx) : undefined,
+          loadBoot
+            ? loadBoot({ path, island })
+            : fetchBoot({
+                endpoint: bootEndpoint ?? "/_so/boot",
+                islandId: island.id,
+                pageId: path,
+              }),
+        ]);
+
+        return mergeRouteData(userData, {
+          editableBoot: boot,
+          editablePreloads: createModulePreloads(boot, {
+            runtimeHref,
+          }),
+        });
+      },
+      component: () => (
+        <EditableIslandRoute
+          route={route}
+          island={island}
+          options={editableOptions}
+        />
+      ),
+      staleTime: staleTime ?? 10_000,
+      gcTime: gcTime ?? 30 * 60_000,
+      preloadStaleTime: preloadStaleTime ?? 30_000,
+      staleReloadMode: staleReloadMode ?? "background",
+    } as never) as any;
+
+    return route;
   };
+}
+
+function mergeRouteData(
+  userData: unknown,
+  editableData: {
+    editableBoot: EditableBoot;
+    editablePreloads: ReturnType<typeof createModulePreloads>;
+  },
+): unknown {
+  if (userData && typeof userData === "object" && !Array.isArray(userData)) {
+    return {
+      ...userData,
+      ...editableData,
+    };
+  }
+
+  if (typeof userData !== "undefined") {
+    return {
+      userData,
+      ...editableData,
+    };
+  }
+
+  return editableData;
 }
 
 export function createLegacyEditableRoute(
@@ -108,77 +205,50 @@ export function createLegacyEditableRoute(
 }
 
 function EditableIslandRoute({
+  route,
   island,
-  path,
   options,
 }: {
+  route: any;
   island: EditableIsland;
-  path: string;
   options: EditableRouteOptions;
 }) {
-  const [state, setState] = React.useState<
-    | { status: "checking" }
-    | { status: "loading"; username?: string }
-    | { status: "ready"; username?: string; boot: EditableBoot }
-    | { status: "error"; message: string }
-  >({ status: "checking" });
+  const routeData = route.useLoaderData() as
+    | { editableBoot?: EditableBoot }
+    | undefined;
+  const boot = routeData?.editableBoot;
   const userCookie = options.userCookie === false ? false : options.userCookie ?? "so_user";
   const loginPath = options.loginPath ?? "/login";
+  const username = userCookie && typeof document !== "undefined"
+    ? parseCookie(document.cookie)[userCookie]
+    : undefined;
 
   React.useEffect(() => {
-    const username = userCookie ? parseCookie(document.cookie)[userCookie] : undefined;
-
     if (userCookie && (!username || username === "anonymous")) {
       window.location.replace(loginPath);
-      return;
     }
+  }, [loginPath, userCookie, username]);
 
-    setState({ status: "loading", username });
-
-    const bootPromise = options.loadBoot
-      ? options.loadBoot({ path, island })
-      : fetchBoot({
-          endpoint: options.bootEndpoint ?? "/_so/boot",
-          islandId: island.id,
-          pageId: path,
-        });
-
-    bootPromise
-      .then((boot) => {
-        setState({
-          status: "ready",
-          username,
-          boot,
-        });
-      })
-      .catch((error) => {
-        setState({
-          status: "error",
-          message: error instanceof Error ? error.message : "Boot failed.",
-        });
-      });
-  }, [island, loginPath, options, path, userCookie]);
-
-  if (state.status === "ready") {
+  if (boot && (!userCookie || (username && username !== "anonymous"))) {
     return (
       <main>
-        {options.showSessionBar !== false && state.username ? (
-          <DefaultSessionBar username={state.username} />
+        {options.showSessionBar !== false && username ? (
+          <DefaultSessionBar username={username} />
         ) : null}
         <EditableIslandShell
           island={island}
-          boot={state.boot}
+          boot={boot}
           callEndpoint={options.callEndpoint}
         />
       </main>
     );
   }
 
-  if (state.status === "error") {
+  if (!boot) {
     return (
       <StatusScreen
         title={`Unable to open ${island.title ?? island.id}`}
-        detail={state.message}
+        detail="Boot data was not returned by the route loader."
         loginPath={loginPath}
       />
     );
@@ -187,7 +257,7 @@ function EditableIslandRoute({
   return (
     <StatusScreen
       title={`Opening ${island.title ?? island.id}`}
-      detail="Checking session..."
+      detail="Redirecting to login..."
       loginPath={loginPath}
     />
   );

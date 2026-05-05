@@ -74,6 +74,38 @@ describe("@superobjective/tanstack-start", () => {
     expect(route.options.gcTime).toBe(30 * 60_000);
   });
 
+  it("composes TanStack beforeLoad and loader options", async () => {
+    const calls: string[] = [];
+    const route = createEditableFileRoute("/globe")({
+      component: island,
+      loadBoot: async () => {
+        calls.push("boot");
+
+        return boot;
+      },
+      beforeLoad: async () => {
+        calls.push("beforeLoad");
+
+        return { user: "mat" };
+      },
+      loader: async () => {
+        calls.push("loader");
+
+        return { pageTitle: "Flights" };
+      },
+    });
+
+    await expect(route.options.beforeLoad({})).resolves.toEqual({
+      user: "mat",
+    });
+    await expect(route.options.loader({})).resolves.toMatchObject({
+      editableBoot: boot,
+      editablePreloads: [],
+      pageTitle: "Flights",
+    });
+    expect(calls).toEqual(["beforeLoad", "loader", "boot"]);
+  });
+
   it("inlines boot JSON and renders the trusted default shell", () => {
     expect(createInlineBootScript(boot)).toContain("__SO_BOOT__");
     expect(createModulePreloads({

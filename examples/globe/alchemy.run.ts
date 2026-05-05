@@ -5,7 +5,7 @@ import * as Effect from "effect/Effect";
 import {
   createSuperobjectiveCloudflareResources,
   type SuperobjectiveManifest,
-} from "@superobjective/tanstack-start";
+} from "@superobjective/tanstack-start/cloudflare";
 import { GlobeIsland } from "./src/globe";
 
 const manifest: SuperobjectiveManifest = {

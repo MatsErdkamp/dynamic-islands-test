@@ -16,7 +16,9 @@
     "paths": {
       "@superobjective/editable-core": ["packages/editable-core/src/index.ts"],
       "@superobjective/cloudflare": ["packages/cloudflare/src/index.ts"],
-      "@superobjective/tanstack-start": ["packages/tanstack-start/src/index.ts"]
+      "@superobjective/tanstack-start": ["packages/tanstack-start/src/index.ts"],
+      "@superobjective/tanstack-start/cloudflare": ["packages/tanstack-start/src/cloudflare.ts"],
+      "@superobjective/tanstack-start/plugin": ["packages/tanstack-start/src/plugin.ts"]
     }
   },
   "include": ["packages/**/*.ts", "packages/**/*.tsx", "examples/**/*.ts", "examples/**/*.tsx"]

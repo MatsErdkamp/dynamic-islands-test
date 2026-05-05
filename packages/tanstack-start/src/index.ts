@@ -53,17 +53,6 @@ export type {
   EditableRouteOptions,
 } from "./route.js";
 export {
-  createEditableServerFunction,
-  callThroughOrchestrator,
-  CallEditableFunctionInput,
-} from "./server-function.js";
-export type {
-  EditableServerFunctionContext,
-} from "./server-function.js";
-export {
-  EditableServerShell,
-} from "./server-shell.js";
-export {
   SO_BOOT_SCRIPT_ID,
   createInlineBootScript,
   escapeJsonForHtml,
@@ -79,28 +68,6 @@ export {
 export {
   createEditableMcpServerManifest,
 } from "./mcp-server.js";
-export {
-  createCloudflareEditableAdapter,
-} from "./cloudflare-adapter.js";
-export type {
-  CloudflareEditableAdapterEnv,
-  CloudflareEditableAdapterOptions,
-} from "./cloudflare-adapter.js";
 export type {
   EditableGeneratedModule,
 } from "./generated.js";
-export {
-  superobjective,
-  createSuperobjectiveManifest,
-} from "./vite-plugin.js";
-export type {
-  SuperobjectiveManifest,
-  SuperobjectiveVitePluginOptions,
-} from "./vite-plugin.js";
-export {
-  createSuperobjectiveCloudflareResources,
-} from "./alchemy.js";
-export type {
-  AlchemyCloudflareModule,
-  SuperobjectiveAlchemyOptions,
-} from "./alchemy.js";

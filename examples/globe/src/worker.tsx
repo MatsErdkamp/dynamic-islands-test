@@ -1,8 +1,8 @@
 import {
-  createCloudflareEditableAdapter,
   createModulePreloads,
   EditableIslandShell,
 } from "@superobjective/tanstack-start";
+import { createCloudflareEditableAdapter } from "@superobjective/tanstack-start/cloudflare";
 import { renderToReadableStream } from "react-dom/server.browser";
 import { GlobeIsland } from "./globe.js";
 import { SuperobjectiveOrchestrator, type Env } from "./superobjective.js";

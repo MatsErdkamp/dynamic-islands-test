@@ -10,10 +10,18 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./plugin": {
+      "types": "./dist/plugin.d.ts",
+      "import": "./dist/plugin.js"
+    },
+    "./cloudflare": {
+      "types": "./dist/cloudflare.d.ts",
+      "import": "./dist/cloudflare.js"
     }
   },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts --clean --sourcemap --external @superobjective/editable-core --external @superobjective/cloudflare --external @tanstack/react-query --external @tanstack/react-router --external react --external react-dom --external zod"
+    "build": "tsup src/index.ts src/plugin.ts src/cloudflare.ts --format esm --dts --clean --sourcemap --external @superobjective/editable-core --external @superobjective/cloudflare --external @tanstack/react-query --external @tanstack/react-router --external react --external react-dom --external zod"
   },
   "dependencies": {
     "@superobjective/cloudflare": "workspace:*",

@@ -10,10 +10,10 @@ import {
   createInlineBootScript,
   createLegacyEditableRoute,
   createModulePreloads,
-  superobjective,
   useEditableFunction,
   type EditableBoot,
 } from "../src/index.js";
+import { superobjective } from "../src/plugin.js";
 
 const echo = createEditableFunction({
   name: "echo",

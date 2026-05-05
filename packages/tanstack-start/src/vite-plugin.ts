@@ -352,7 +352,7 @@ function createGeneratedServerModule(input: {
 // @ts-nocheck
 import {
   createCloudflareEditableAdapter,
-} from "@superobjective/tanstack-start";
+} from "@superobjective/tanstack-start/cloudflare";
 import {
   createOrchestratorDurableObject,
 } from "@superobjective/cloudflare";
